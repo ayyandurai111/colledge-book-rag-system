@@ -1,0 +1,20 @@
+[
+  {
+    "question": "What is Newton's Second Law?",
+    "expected_keywords": ["force", "mass", "acceleration", "F = ma"],
+    "expected_source": "physics.pdf",
+    "expected_chapter": "Chapter 3"
+  },
+  {
+    "question": "Define entropy in thermodynamics",
+    "expected_keywords": ["entropy", "disorder", "thermodynamics"],
+    "expected_source": "physics.pdf",
+    "expected_chapter": "Chapter 8"
+  },
+  {
+    "question": "What is the derivative of sin(x)?",
+    "expected_keywords": ["cos", "derivative", "sin"],
+    "expected_source": "calculus.pdf",
+    "expected_chapter": "Chapter 4"
+  }
+]

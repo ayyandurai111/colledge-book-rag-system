@@ -1,0 +1,23 @@
+chunking:
+  min_tokens: 400          # target minimum per window
+  max_tokens: 500          # target maximum per window (safe under 512 embed limit)
+  overlap_tokens: 75       # overlap between adjacent windows
+
+  # Quality gate (hard limits — chunk dropped if outside range)
+  quality_min_tokens: 100
+  quality_max_tokens: 700
+  quality_min_tokens_special: 30   # relaxed floor for definition/formula chunks
+
+embedding:
+  model: nvidia/nv-embed-v1
+  provider: nvidia
+  batch_size: 50
+  max_tokens: 512          # NV-Embed-v1 hard context limit
+
+retrieval:
+  top_k: 5
+  score_threshold: 0.3
+
+vectorstore:
+  provider: chroma
+  persist_path: data/vectorstore
