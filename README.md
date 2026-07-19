@@ -3,9 +3,9 @@ title: College RAG
 emoji: 📚
 colorFrom: blue
 colorTo: purple
-sdk: gradio
-sdk_version: "4.40.0"
-app_file: apps/gradio_app.py
+sdk: streamlit
+sdk_version: "1.37.1"
+app_file: apps/streamlit_app.py
 pinned: false
 license: mit
 short_description: Semantic-chunking RAG chatbot for college textbooks
@@ -235,7 +235,7 @@ Face Spaces' free CPU Basic tier (2 vCPU, **16GB RAM**, 50GB disk, fully
 free) fits comfortably.
 
 1. Create a free account at **[huggingface.co](https://huggingface.co)**.
-2. **New Space** → SDK: **Gradio** → Hardware: "CPU basic · FREE".
+2. **New Space** → SDK: **Streamlit** → Hardware: "CPU basic · FREE".
 3. Push this repo to the Space:
    ```bash
    git clone https://huggingface.co/spaces/<your-username>/<space-name>
