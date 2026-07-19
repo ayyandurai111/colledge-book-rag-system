@@ -141,7 +141,7 @@ with gr.Blocks(title="College Books RAG", theme=gr.themes.Soft()) as demo:
 
             build_btn = gr.Button("🔨 Build index", variant="primary")
 
-            log_output = gr.Code(label="🪵 Log output", value="(log output will appear here)", language="log", lines=8)
+            log_output = gr.Textbox(label="🪵 Log output", value="(log output will appear here)", lines=8, max_lines=20)
 
             index_info = gr.Markdown("No index")
 
