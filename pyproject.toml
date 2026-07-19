@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "college-rag"
+version = "1.0.0"
+description = "A pure-retrieval, semantic-chunking RAG system for college textbooks"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = [
+    "pypdf==4.3.1",
+    "python-docx==1.1.2",
+    "sentence-transformers==3.0.1",
+    "faiss-cpu==1.8.0",
+    "numpy==1.26.4",
+]
+
+[project.optional-dependencies]
+ui = ["streamlit==1.37.1"]
+dev = ["pytest==8.3.2", "pytest-cov==5.0.0", "fpdf2==2.7.9"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "."]
+testpaths = ["tests"]

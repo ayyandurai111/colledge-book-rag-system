@@ -1,0 +1,9 @@
+# Core RAG pipeline (retrieval-only — no LLM dependency)
+pypdf==4.3.1
+python-docx==1.1.2
+sentence-transformers==3.0.1
+faiss-cpu==1.8.0
+numpy==1.26.4
+
+# Web UI (optional but required for `streamlit run apps/streamlit_app.py`)
+streamlit==1.37.1
