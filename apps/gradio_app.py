@@ -6,6 +6,7 @@ import sys
 import tempfile
 
 import gradio as gr
+import spaces
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -48,6 +49,7 @@ class LogCaptureHandler(logging.Handler):
         return "\n".join(self.lines[-300:]) or "(no log output yet)"
 
 
+@spaces.GPU
 def build_index(files, min_chars, max_chars, threshold, top_k, pipeline_state):
     if not files:
         return pipeline_state, "⚠️ Upload at least one PDF or DOCX file first.", gr.update(value="No index")
@@ -64,6 +66,7 @@ def build_index(files, min_chars, max_chars, threshold, top_k, pipeline_state):
         default_top_k=top_k,
     )
 
+    os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
     pipeline = RAGPipeline(config=config)
 
     tmp_paths = []
