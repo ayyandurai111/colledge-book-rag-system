@@ -3,19 +3,19 @@ title: College RAG
 emoji: 📚
 colorFrom: blue
 colorTo: purple
-sdk: streamlit
-sdk_version: "1.37.1"
-app_file: apps/streamlit_app.py
+sdk: gradio
+sdk_version: "4.40.0"
+app_file: apps/gradio_app.py
 pinned: false
 license: mit
-short_description: Pure-retrieval semantic-chunking RAG chatbot for college textbooks (no LLM)
+short_description: Semantic-chunking RAG chatbot for college textbooks
 ---
 
 # 📚 College RAG — Pure-Retrieval RAG Chatbot for College Textbooks
 
-Semantic Chunking + FAISS Vector Search, wrapped in a chatbot-style
-Streamlit UI. Upload PDF/DOCX textbooks, ask questions in a chat window,
-and get the most relevant full passages back — instantly.
+Semantic Chunking + FAISS Vector Search, wrapped in a Gradio chatbot UI.
+Upload PDF/DOCX textbooks, ask questions in a chat window, and get the
+most relevant full passages back — instantly.
 
 **This is retrieval-only — no LLM/Claude/OpenAI dependency.** No API key
 is required, no `anthropic` package is installed, and answers are never
@@ -52,7 +52,8 @@ college_rag/
 │       └── logging_config.py    — Centralized logging setup
 │
 ├── apps/
-│   └── streamlit_app.py        — Chatbot-style web UI (see below)
+│   ├── gradio_app.py            — Chatbot-style Gradio UI (default)
+│   └── streamlit_app.py         — Legacy Streamlit UI
 │
 ├── tests/                     ← 74 tests, offline (no model download needed)
 │   ├── conftest.py             — Shared fixtures: FakeSentenceTransformer + inline sample-file generators
@@ -115,21 +116,19 @@ pip install -e ".[ui,dev]"
 ## 🚀 Running the app
 
 ```bash
-streamlit run apps/streamlit_app.py
+python apps/gradio_app.py
 ```
 
 ### UI layout
 
-- **Left — Chat**: a chatbot-style conversation window. Ask a question,
+- **Chat**: a chatbot-style conversation window. Ask a question,
   get the most relevant full book passages back as a chat reply, with
   source (file / chapter / page) and similarity score for each.
-- **Right — Upload**: drag in PDF/DOCX files, tune chunking settings,
+- **Upload panel**: drag in PDF/DOCX files, tune chunking settings,
   and click **🔨 Build index**. Index stats (chunk count, source files)
   are shown once built.
-- **🪵 Live logger**: a toggle on the right panel that streams backend
-  log messages (text extraction, chunking, indexing progress) into a
-  live-updating panel as they happen — useful for watching large-book
-  indexing progress in real time.
+- **🪵 Log output**: a collapsible log panel shows extraction, chunking,
+  and indexing progress after each build.
 
 ### Python API
 
@@ -236,7 +235,7 @@ Face Spaces' free CPU Basic tier (2 vCPU, **16GB RAM**, 50GB disk, fully
 free) fits comfortably.
 
 1. Create a free account at **[huggingface.co](https://huggingface.co)**.
-2. **New Space** → SDK: **Streamlit** → Hardware: "CPU basic · FREE".
+2. **New Space** → SDK: **Gradio** → Hardware: "CPU basic · FREE".
 3. Push this repo to the Space:
    ```bash
    git clone https://huggingface.co/spaces/<your-username>/<space-name>
@@ -246,9 +245,9 @@ free) fits comfortably.
    git commit -m "Deploy college RAG chatbot (retrieval-only, no LLM)"
    git push
    ```
-   (The YAML frontmatter at the top of this README already points the
-   Space at `apps/streamlit_app.py` via the Streamlit SDK — no extra
-   config, no API key secrets needed.)
+   (The YAML frontmatter at the top of this README already configures
+   the Space with `sdk: gradio` and `app_file: apps/gradio_app.py` —
+   no extra config needed.)
 4. The Space builds automatically and goes live within a few minutes at
    `https://huggingface.co/spaces/<user>/<space-name>`.
 
