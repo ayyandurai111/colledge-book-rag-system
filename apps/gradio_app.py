@@ -29,9 +29,9 @@ class LogCaptureHandler(logging.Handler):
         return "\n".join(self.lines[-300:]) or "(no log output yet)"
 
 
-def build_index(files, min_chars, max_chars, threshold, top_k, pipeline_state):
-    if not files:
-        return pipeline_state, "", "⚠️ Upload at least one PDF or DOCX file first.", gr.update(value="No index")
+def build_index(file, min_chars, max_chars, threshold, top_k, pipeline_state):
+    if file is None:
+        return pipeline_state, gr.update(value="⚠️ Upload a PDF or DOCX file first."), gr.update(value="No index")
 
     handler = LogCaptureHandler()
     logger = logging.getLogger("college_rag")
@@ -47,34 +47,32 @@ def build_index(files, min_chars, max_chars, threshold, top_k, pipeline_state):
 
     pipeline = RAGPipeline(config=config)
 
-    tmp_paths = []
+    tmp_path = None
     stats = None
     try:
-        for f in files:
-            suffix = os.path.splitext(f)[1] or ".pdf"
-            tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
-            tmp_paths.append(tmp.name)
-            tmp.close()
-            with open(f, "rb") as src, open(tmp.name, "wb") as dst:
-                dst.write(src.read())
+        suffix = os.path.splitext(file)[1] or ".pdf"
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+        tmp_path = tmp.name
+        tmp.close()
+        with open(file, "rb") as src, open(tmp.name, "wb") as dst:
+            dst.write(src.read())
 
-        stats = pipeline.build_index_from_files(tmp_paths)
+        stats = pipeline.build_index_from_files([tmp_path])
     except CollegeRAGError as e:
         new_state = {"pipeline": pipeline, "stats": None, "top_k": top_k}
-        return new_state, handler.get_logs(), f"❌ {e}", gr.update(value="No index")
+        return new_state, handler.get_logs(), gr.update(value="No index")
     except Exception as e:
         new_state = {"pipeline": pipeline, "stats": None, "top_k": top_k}
-        return new_state, handler.get_logs(), f"❌ Unexpected error: {e}", gr.update(value="No index")
+        return new_state, handler.get_logs(), gr.update(value="No index")
     finally:
-        for p in tmp_paths:
-            if os.path.exists(p):
-                os.unlink(p)
+        if tmp_path and os.path.exists(tmp_path):
+            os.unlink(tmp_path)
         logger.removeHandler(handler)
 
     new_state = {"pipeline": pipeline, "stats": stats, "top_k": top_k}
     idx_text = f"**Chunks:** {stats.total_chunks} | **Files:** {stats.total_source_files}"
 
-    return new_state, handler.get_logs(), "", gr.update(value=idx_text)
+    return new_state, handler.get_logs(), gr.update(value=idx_text)
 
 
 def respond(question, history, pipeline_state):
@@ -128,8 +126,7 @@ with gr.Blocks(title="College Books RAG", theme=gr.themes.Soft()) as demo:
         with gr.Column(scale=1):
             gr.Markdown("### 📤 Upload books")
             file_input = gr.File(
-                label="PDF or DOCX files (drag & drop)",
-                file_count="multiple",
+                label="PDF or DOCX files (upload one, then repeat for more)",
             )
 
             with gr.Accordion("⚙️ Chunking settings", open=False):
@@ -147,7 +144,7 @@ with gr.Blocks(title="College Books RAG", theme=gr.themes.Soft()) as demo:
     build_btn.click(
         fn=build_index,
         inputs=[file_input, min_chars, max_chars, threshold, top_k, pipeline_state],
-        outputs=[pipeline_state, log_output, chatbot, index_info],
+        outputs=[pipeline_state, log_output, index_info],
     )
 
     msg.submit(fn=respond, inputs=[msg, chatbot, pipeline_state], outputs=[msg, chatbot])
