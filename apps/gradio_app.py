@@ -128,9 +128,8 @@ with gr.Blocks(title="College Books RAG", theme=gr.themes.Soft()) as demo:
         with gr.Column(scale=1):
             gr.Markdown("### 📤 Upload books")
             file_input = gr.File(
-                label="PDF or DOCX files",
+                label="PDF or DOCX files (drag & drop)",
                 file_count="multiple",
-                file_types=[".pdf", ".docx"],
             )
 
             with gr.Accordion("⚙️ Chunking settings", open=False):
@@ -157,4 +156,4 @@ with gr.Blocks(title="College Books RAG", theme=gr.themes.Soft()) as demo:
 
 
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(server_name="0.0.0.0")
