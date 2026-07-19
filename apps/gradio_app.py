@@ -1,8 +1,9 @@
+"""Gradio app — College Books RAG for Hugging Face Spaces."""
+
 import logging
 import os
 import sys
 import tempfile
-from typing import Optional
 
 import gradio as gr
 
@@ -13,6 +14,24 @@ from college_rag.exceptions import CollegeRAGError
 from college_rag.pipeline import RAGPipeline
 
 logger = logging.getLogger("college_rag")
+
+
+# ---------------------------------------------------------------------------
+# Monkey-patch Gradio 4.40.0 bug: _json_schema_to_python_type crashes when
+# schema is a bool instead of a dict (https://github.com/gradio-app/gradio/issues/8756)
+# ---------------------------------------------------------------------------
+import gradio_client.utils as _gc_utils
+
+_orig_jstt = _gc_utils._json_schema_to_python_type
+
+
+def _safe_json_schema_to_python_type(schema, defs=None):
+    if isinstance(schema, bool):
+        return "any"
+    return _orig_jstt(schema, defs)
+
+
+_gc_utils._json_schema_to_python_type = _safe_json_schema_to_python_type
 
 
 class LogCaptureHandler(logging.Handler):
@@ -29,9 +48,9 @@ class LogCaptureHandler(logging.Handler):
         return "\n".join(self.lines[-300:]) or "(no log output yet)"
 
 
-def build_index(file, min_chars, max_chars, threshold, top_k, pipeline_state):
-    if file is None:
-        return pipeline_state, gr.update(value="⚠️ Upload a PDF or DOCX file first."), gr.update(value="No index")
+def build_index(files, min_chars, max_chars, threshold, top_k, pipeline_state):
+    if not files:
+        return pipeline_state, "⚠️ Upload at least one PDF or DOCX file first.", gr.update(value="No index")
 
     handler = LogCaptureHandler()
     logger = logging.getLogger("college_rag")
@@ -47,45 +66,41 @@ def build_index(file, min_chars, max_chars, threshold, top_k, pipeline_state):
 
     pipeline = RAGPipeline(config=config)
 
-    tmp_path = None
+    tmp_paths = []
     stats = None
     try:
-        suffix = os.path.splitext(file)[1] or ".pdf"
-        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
-        tmp_path = tmp.name
-        tmp.close()
-        with open(file, "rb") as src, open(tmp.name, "wb") as dst:
-            dst.write(src.read())
+        for f in files:
+            suffix = os.path.splitext(f)[1] or ".pdf"
+            tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+            tmp_paths.append(tmp.name)
+            tmp.close()
+            with open(f, "rb") as src, open(tmp.name, "wb") as dst:
+                dst.write(src.read())
 
-        stats = pipeline.build_index_from_files([tmp_path])
+        stats = pipeline.build_index_from_files(tmp_paths)
     except CollegeRAGError as e:
-        new_state = {"pipeline": pipeline, "stats": None, "top_k": top_k}
-        return new_state, handler.get_logs(), gr.update(value="No index")
+        return pipeline, handler.get_logs(), f"❌ {e}"
     except Exception as e:
-        new_state = {"pipeline": pipeline, "stats": None, "top_k": top_k}
-        return new_state, handler.get_logs(), gr.update(value="No index")
+        return pipeline, handler.get_logs(), f"❌ Unexpected error: {e}"
     finally:
-        if tmp_path and os.path.exists(tmp_path):
-            os.unlink(tmp_path)
+        for p in tmp_paths:
+            if os.path.exists(p):
+                os.unlink(p)
         logger.removeHandler(handler)
 
-    new_state = {"pipeline": pipeline, "stats": stats, "top_k": top_k}
     idx_text = f"**Chunks:** {stats.total_chunks} | **Files:** {stats.total_source_files}"
+    return pipeline, handler.get_logs(), gr.update(value=idx_text)
 
-    return new_state, handler.get_logs(), gr.update(value=idx_text)
 
-
-def respond(question, history, pipeline_state):
+def respond(question, history, pipeline):
     if not question:
         return "", history
 
-    if pipeline_state is None or pipeline_state.get("pipeline") is None:
+    if pipeline is None:
         history.append((question, "⚠️ No index yet — upload your books and click **Build index** first."))
         return "", history
 
-    pipeline = pipeline_state["pipeline"]
-    top_k = pipeline_state.get("top_k", 5)
-
+    top_k = 5
     results = pipeline.query(question, top_k=top_k)
 
     if not results:
@@ -108,7 +123,7 @@ with gr.Blocks(title="College Books RAG", theme=gr.themes.Soft()) as demo:
     gr.Markdown("# 📚 College Books RAG")
     gr.Markdown("Semantic Chunking + FAISS Vector Search — pure retrieval, no LLM involved")
 
-    pipeline_state = gr.State(None)
+    pipeline = gr.State(None)
 
     with gr.Row():
         with gr.Column(scale=2):
@@ -126,7 +141,8 @@ with gr.Blocks(title="College Books RAG", theme=gr.themes.Soft()) as demo:
         with gr.Column(scale=1):
             gr.Markdown("### 📤 Upload books")
             file_input = gr.File(
-                label="PDF or DOCX files (upload one, then repeat for more)",
+                label="PDF or DOCX files",
+                file_count="multiple",
             )
 
             with gr.Accordion("⚙️ Chunking settings", open=False):
@@ -143,13 +159,13 @@ with gr.Blocks(title="College Books RAG", theme=gr.themes.Soft()) as demo:
 
     build_btn.click(
         fn=build_index,
-        inputs=[file_input, min_chars, max_chars, threshold, top_k, pipeline_state],
-        outputs=[pipeline_state, log_output, index_info],
+        inputs=[file_input, min_chars, max_chars, threshold, top_k, pipeline],
+        outputs=[pipeline, log_output, index_info],
     )
 
-    msg.submit(fn=respond, inputs=[msg, chatbot, pipeline_state], outputs=[msg, chatbot])
-    submit.click(fn=respond, inputs=[msg, chatbot, pipeline_state], outputs=[msg, chatbot])
-    clear.click(fn=lambda: ([], None), inputs=[], outputs=[chatbot, pipeline_state])
+    msg.submit(fn=respond, inputs=[msg, chatbot, pipeline], outputs=[msg, chatbot])
+    submit.click(fn=respond, inputs=[msg, chatbot, pipeline], outputs=[msg, chatbot])
+    clear.click(fn=lambda: ([], None), inputs=[], outputs=[chatbot, pipeline])
 
 
 if __name__ == "__main__":
